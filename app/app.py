@@ -19,8 +19,59 @@ with app.app_context():
 
 @app.route('/tasks')
 def get_tasks():
-     tasks = Task.query.all()
+     completed = request.args.get('completed')
+     priority = request.args.get('priority')
      result = []
+     print("GET /tasks called")
+
+     print("Completed:", completed)
+
+    
+   
+     if completed == None:
+            tasks = Task.query.all()
+     elif completed == "true":
+        completed = True
+        tasks = Task.query.filter_by(completed=completed).all()
+     elif completed == "false":
+        completed = False
+        tasks = Task.query.filter_by(completed=completed).all()
+     else:
+        return{
+            "error": "Invalid completed"
+        },400
+
+    
+     if priority is None:
+        tasks = Task.query.all()
+     elif priority in {"high", "medium", "low"}:
+        tasks = Task.query.filter_by(priority=priority).all()
+     else:
+        return{
+            "error": "Invalid priority"
+        },400
+
+
+             
+     if completed is None and priority is None:
+        tasks = Task.query.all()
+
+     elif priority is None:
+         tasks = Task.query.filter_by(completed=completed).all()
+
+     elif completed is None:
+         tasks = Task.query.filter_by(priority=priority).all()
+
+     elif completed is not None and priority is not None:
+         tasks = Task.query.filter_by(completed=completed, priority=priority).all()
+        
+     else:
+        return{
+            "error": "INVALID Compl or Priority"
+        },400
+     
+    
+
      for task in tasks:
         result.append({
             "id":task.id ,
