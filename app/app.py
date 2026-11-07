@@ -19,15 +19,59 @@ with app.app_context():
 
 @app.route('/tasks')
 def get_tasks():
+     sort_options = {
+        "id": Task.id , 
+        "title": Task.title ,
+        "priority": Task.priority
+     }
+     order_param = request.args.get('order' , 'asc')
+     
+     #order validation
+     if order_param not in ('asc' , 'desc'):
+        return{
+            "error": "Invalid order"
+        },400
+
+     sort_param = request.args.get('sort' , 'id')
+     
+     #sort parameter validation
+     if sort_param not in sort_options:
+        return{
+            "error": "Invalid sort field"
+        },400
+
+     sort_col = sort_options[sort_param]
+     if order_param == 'asc':
+        sorting  = sort_col.asc()
+     else:
+        sorting = sort_col.desc()
+
      completed = request.args.get('completed')
      priority = request.args.get('priority')
+     search_param = request.args.get('search')
+     page = request.args.get('page' , 1)
+     per_page = request.args.get('per_page' , 10)
+     
+
+
+     try:
+        page = int(page)
+        per_page = int(per_page)
+     except ValueError:
+        return{"error": "Page and per_page must be integers "} , 400
+     if page <= 0 or per_page <= 0:
+        return{"error": "Page and per_page must be greater than 0"} , 400
+     
+     
      query = Task.query
+     query = query.order_by(sorting)
+     offset = (page-1)* per_page
      result = []
      print("GET /tasks called")
 
      print("Completed:", completed)
 
-    
+      #validation
      if completed not in (None, "true", "false"):
         return {"error": "Invalid completed"}, 400
 
@@ -35,7 +79,6 @@ def get_tasks():
         return {"error": "Invalid priority"}, 400
 
         
-        #validation
      if completed == "true":
         completed = True
      if completed == "false":
@@ -46,8 +89,16 @@ def get_tasks():
      if priority is not None:
         query = query.filter_by(priority = priority)
 
-     tasks = query.all()
+       
+     if search_param is not None:
+         query = query.filter(Task.title.like(f"%{search_param}%"))
 
+     
+     query = query.offset(offset).limit(per_page)
+
+
+     tasks = query.all()
+   
     
     
 
@@ -62,6 +113,9 @@ def get_tasks():
      return{
         "tasks": result
     }
+    
+
+
 
 @app.route('/tasks/<int:task_id>' , methods=['GET'])
 def get_one_task(task_id):
