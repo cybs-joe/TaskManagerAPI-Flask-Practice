@@ -21,55 +21,34 @@ with app.app_context():
 def get_tasks():
      completed = request.args.get('completed')
      priority = request.args.get('priority')
+     query = Task.query
      result = []
      print("GET /tasks called")
 
      print("Completed:", completed)
 
     
-   
-     if completed == None:
-            tasks = Task.query.all()
-     elif completed == "true":
+     if completed not in (None, "true", "false"):
+        return {"error": "Invalid completed"}, 400
+
+     if priority is not None and priority not in {"high", "medium", "low"}:
+        return {"error": "Invalid priority"}, 400
+
+        
+        #validation
+     if completed == "true":
         completed = True
-        tasks = Task.query.filter_by(completed=completed).all()
-     elif completed == "false":
+     if completed == "false":
         completed = False
-        tasks = Task.query.filter_by(completed=completed).all()
-     else:
-        return{
-            "error": "Invalid completed"
-        },400
+
+     if completed is not None:
+        query = query.filter_by(completed = completed)
+     if priority is not None:
+        query = query.filter_by(priority = priority)
+
+     tasks = query.all()
 
     
-     if priority is None:
-        tasks = Task.query.all()
-     elif priority in {"high", "medium", "low"}:
-        tasks = Task.query.filter_by(priority=priority).all()
-     else:
-        return{
-            "error": "Invalid priority"
-        },400
-
-
-             
-     if completed is None and priority is None:
-        tasks = Task.query.all()
-
-     elif priority is None:
-         tasks = Task.query.filter_by(completed=completed).all()
-
-     elif completed is None:
-         tasks = Task.query.filter_by(priority=priority).all()
-
-     elif completed is not None and priority is not None:
-         tasks = Task.query.filter_by(completed=completed, priority=priority).all()
-        
-     else:
-        return{
-            "error": "INVALID Compl or Priority"
-        },400
-     
     
 
      for task in tasks:
