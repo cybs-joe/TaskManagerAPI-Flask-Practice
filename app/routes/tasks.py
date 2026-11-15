@@ -1,23 +1,11 @@
-from flask import Flask , request
-from flask_sqlalchemy import SQLAlchemy
+from flask import Blueprint, request
+from ..models import Task
+from .. import db
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
-db= SQLAlchemy(app)
-
-class Task(db.Model):
-    id = db.Column(db.Integer ,  primary_key=True)
-    title = db.Column(db.String , nullable=False)
-    description = db.Column(db.String(100) , nullable=False)
-    completed = db.Column(db.Boolean , nullable=False)
-    priority = db.Column(db.String(100) , nullable=False , default="medium")
+tasks_bp = Blueprint('tasks' , __name__)
 
 
-with app.app_context():
-    db.create_all()
-
-
-@app.route('/tasks')
+@tasks_bp.route('/tasks')
 def get_tasks():
      sort_options = {
         "id": Task.id , 
@@ -111,13 +99,12 @@ def get_tasks():
             "priority":task.priority
         })
      return{
-        "tasks": result
+        "tasks": result,
     }
+
     
-
-
-
-@app.route('/tasks/<int:task_id>' , methods=['GET'])
+    
+@tasks_bp.route('/tasks/<int:task_id>' , methods=['GET'])
 def get_one_task(task_id):
     tas = Task.query.filter_by(id=task_id).one_or_404()
     return{
@@ -128,7 +115,9 @@ def get_one_task(task_id):
             "priority":tas.priority
     }
 
-@app.route('/tasks' , methods=['POST'])
+
+
+@tasks_bp.route('/tasks' , methods=['POST'])
 def create_task():
     data = request.get_json()
 
@@ -165,8 +154,9 @@ def create_task():
             "completed":t.completed,
             "priority":t.priority
     }
+
     
-@app.route('/tasks/<int:task_id>' , methods=['PUT'])
+@tasks_bp.route('/tasks/<int:task_id>' , methods=['PUT'])
 def update(task_id):
         exist_task = Task.query.filter_by(id=task_id).one_or_404()
         data = request.json
@@ -204,7 +194,7 @@ def update(task_id):
         },200
 
 
-@app.route('/tasks/<int:task_id>', methods=['PATCH'])
+@tasks_bp.route('/tasks/<int:task_id>', methods=['PATCH'])
 def patch(task_id):
     update_exit_task = Task.query.filter_by(id=task_id).one_or_404()
     data = request.get_json()
@@ -257,8 +247,21 @@ def patch(task_id):
             "priority":update_exit_task.priority
     },200
 
+@tasks_bp.route('/tasks/<int:task_id>/complete' , methods=['PATCH'])
+def complete_task(task_id):
+    comp_task = Task.query.filter_by(id = task_id).one_or_404()
+    comp_task.completed = True
+    db.session.commit()
 
-@app.route('/tasks/<int:task_id>' , methods=['DELETE'])
+    return {
+        "id":comp_task.id,
+        "title":comp_task.title,
+        "completed":comp_task.completed,
+        "priority":comp_task.priority
+    },200
+
+
+@tasks_bp.route('/tasks/<int:task_id>' , methods=['DELETE'])
 def delete(task_id):
     dele = Task.query.filter_by(id = task_id).one_or_404()
     db.session.delete(dele)
@@ -291,16 +294,10 @@ def unsupported_med_typ(e):
         "error": "Content-Type must be application/json"
     },415
 
-app.register_error_handler(400,http_err_handl)
-app.register_error_handler(404,error_handl)
-app.register_error_handler(415,unsupported_med_typ)
+tasks_bp.register_error_handler(400,http_err_handl)
+tasks_bp.register_error_handler(404,error_handl)
+tasks_bp.register_error_handler(415,unsupported_med_typ)
 
 
 
 
-
-
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
