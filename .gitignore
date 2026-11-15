@@ -1,3 +1,14 @@
-.venv
+
+__pycache__/
+*.pyc
+
+venv/
+.venv/
+
+instance/
+*.db
+*.backup
+
+.env.venv
 .vscode
 data.db
