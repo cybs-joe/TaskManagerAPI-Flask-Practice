@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from ..models import Task
+from ..models import Task, User
 from .. import db
 
 tasks_bp = Blueprint('tasks' , __name__)
@@ -120,6 +120,26 @@ def get_one_task(task_id):
 @tasks_bp.route('/tasks' , methods=['POST'])
 def create_task():
     data = request.get_json()
+    user = db.session.get(User , data['user_id'])
+    
+
+    if 'user_id' not in data:
+        return{
+            "error": "user_id is required"
+        },400
+    
+    if not isinstance(data['user_id'], int) or isinstance(data['user_id'], bool):
+        return{
+            "error": "Incorrect user_id data type , must be INT"
+        },400
+    
+    if user is None:
+        return{
+            "error": "user_id not found in database"
+        },404
+    
+    
+    
 
     if data is None:
         return{
@@ -143,7 +163,8 @@ def create_task():
     t = Task(
         title =data["title"] ,
         description = data["description"] ,
-        completed = False , 
+        completed = False ,
+        user = user, 
     )
     db.session.add(t)
     db.session.commit()
@@ -156,6 +177,8 @@ def create_task():
     }
 
     
+
+
 @tasks_bp.route('/tasks/<int:task_id>' , methods=['PUT'])
 def update(task_id):
         exist_task = Task.query.filter_by(id=task_id).one_or_404()
@@ -259,6 +282,32 @@ def complete_task(task_id):
         "completed":comp_task.completed,
         "priority":comp_task.priority
     },200
+
+
+
+@tasks_bp.route('/users/<int:user_id>/tasks' , methods=['GET'])
+def usr_task(user_id):
+    user_exists = db.session.get(User , user_id)
+
+    if user_exists is None:
+        return{
+            "error": "User doesnt exist in database"
+        },404
+    
+    user_tasks = user_exists.tasks
+
+    tasks_data = [{
+        "id":task.id,
+        "title":task.title,
+        "description":task.description,
+        "completed":task.completed,
+        "priority":task.priority
+    }
+    for task in user_tasks
+    ]
+    return{
+        "tasks":tasks_data
+    }
 
 
 @tasks_bp.route('/tasks/<int:task_id>' , methods=['DELETE'])
